@@ -5,7 +5,6 @@ import { useAuth } from "@/components/AuthProvider";
 import { useSettings } from "@/components/SettingsProvider";
 import {
   BarChart3,
-  Download,
   Printer,
   Loader2,
   Package,
@@ -14,19 +13,6 @@ import {
   Truck,
   Filter,
 } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -301,71 +287,6 @@ export default function ReportsPage() {
     );
   };
 
-  // Chart Data Preparation
-  const getChartData = () => {
-    if (reportType === "inventory") {
-      // Group by category
-      const grouped = data.reduce(
-        (acc, item) => {
-          const cat = item.product?.category || "Outros";
-          acc[cat] = (acc[cat] || 0) + item.quantity;
-          return acc;
-        },
-        {} as Record<string, number>,
-      );
-      return Object.entries(grouped).map(([name, value]) => ({ name, value }));
-    } else if (reportType === "consumption") {
-      // Group by product
-      const grouped = data.reduce(
-        (acc, item) => {
-          const prod = item.product?.name || "Outros";
-          acc[prod] = (acc[prod] || 0) + item.quantity;
-          return acc;
-        },
-        {} as Record<string, number>,
-      );
-      return Object.entries(grouped)
-        .sort((a, b) => (b[1] as number) - (a[1] as number))
-        .slice(0, 10) // Top 10
-        .map(([name, value]) => ({ name, value }));
-    } else if (reportType === "orders") {
-      // Group by status
-      const grouped = data.reduce(
-        (acc, item) => {
-          const status = item.status || "Desconhecido";
-          acc[status] = (acc[status] || 0) + 1;
-          return acc;
-        },
-        {} as Record<string, number>,
-      );
-      return Object.entries(grouped).map(([name, value]) => ({ name, value }));
-    } else if (reportType === "shipments") {
-      // Group by destination
-      const grouped = data.reduce(
-        (acc, item) => {
-          const dest = item.destination?.name || "Desconhecido";
-          acc[dest] = (acc[dest] || 0) + 1;
-          return acc;
-        },
-        {} as Record<string, number>,
-      );
-      return Object.entries(grouped).map(([name, value]) => ({ name, value }));
-    }
-    return [];
-  };
-
-  const chartData = getChartData();
-  const COLORS = [
-    "#10b981",
-    "#3b82f6",
-    "#f59e0b",
-    "#ef4444",
-    "#8b5cf6",
-    "#ec4899",
-    "#06b6d4",
-    "#f97316",
-  ];
-
   return (
     <div className="max-w-7xl mx-auto">
       <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
@@ -544,72 +465,6 @@ export default function ReportsPage() {
         </div>
 
         <div className="lg:col-span-3 space-y-6 print:col-span-4">
-          {/* Chart Section */}
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm h-80 print:hidden">
-            <h3 className="font-semibold text-slate-900 mb-4">
-              {reportType === "inventory" && "Estoque por Categoria"}
-              {reportType === "consumption" && "Top 10 Produtos Consumidos"}
-              {reportType === "orders" && "Pedidos por Status"}
-              {reportType === "shipments" && "Remessas por Destino"}
-            </h3>
-
-            {isLoading ? (
-              <div className="h-full flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-slate-300" />
-              </div>
-            ) : chartData.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-slate-500">
-                Nenhum dado para exibir no gráfico
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                {reportType === "inventory" ||
-                reportType === "orders" ||
-                reportType === "shipments" ? (
-                  <PieChart>
-                    <Pie
-                      data={chartData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) =>
-                        `${name} ${((percent || 0) * 100).toFixed(0)}%`
-                      }
-                    >
-                      {chartData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[index % COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                ) : (
-                  <BarChart
-                    data={chartData}
-                    layout="vertical"
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                    <XAxis type="number" />
-                    <YAxis
-                      dataKey="name"
-                      type="category"
-                      width={150}
-                      tick={{ fontSize: 12 }}
-                    />
-                    <Tooltip />
-                    <Bar dataKey="value" fill="#10b981" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                )}
-              </ResponsiveContainer>
-            )}
-          </div>
-
           {/* Data Table Section */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
