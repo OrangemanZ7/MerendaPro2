@@ -1,38 +1,52 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Package, Loader2, MapPin, PackagePlus, Edit, Scale } from 'lucide-react';
-import NewProductModal from '@/components/NewProductModal';
-import EditThresholdModal from '@/components/EditThresholdModal';
-import AdjustInventoryModal from '@/components/AdjustInventoryModal';
-import { useSettings } from '@/components/SettingsProvider';
-import { useAuth } from '@/components/AuthProvider';
+import { useState, useEffect } from "react";
+import {
+  Package,
+  Loader2,
+  MapPin,
+  PackagePlus,
+  Edit,
+  Scale,
+} from "lucide-react";
+import NewProductModal from "@/components/NewProductModal";
+import EditThresholdModal from "@/components/EditThresholdModal";
+import AdjustInventoryModal from "@/components/AdjustInventoryModal";
+import { useSettings } from "@/components/SettingsProvider";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function InventoryPage() {
   const [inventory, setInventory] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState<string>('');
+  const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
-  const [adjustingInventoryItem, setAdjustingInventoryItem] = useState<any>(null);
+  const [adjustingInventoryItem, setAdjustingInventoryItem] =
+    useState<any>(null);
   const { settings } = useSettings();
   const { user } = useAuth();
-  
-  const canEditThreshold = user?.role === 'admin' || settings.rolePermissions?.[user?.role || '']?.products?.update;
-  const canAdjustInventory = user?.role === 'admin' || settings.rolePermissions?.[user?.role || '']?.adjustments?.create;
-  const canCreateProduct = user?.role === 'admin' || settings.rolePermissions?.[user?.role || '']?.products?.create;
+
+  const canEditThreshold =
+    user?.role === "admin" ||
+    settings.rolePermissions?.[user?.role || ""]?.products?.update;
+  const canAdjustInventory =
+    user?.role === "admin" ||
+    settings.rolePermissions?.[user?.role || ""]?.adjustments?.create;
+  const canCreateProduct =
+    user?.role === "admin" ||
+    settings.rolePermissions?.[user?.role || ""]?.products?.create;
 
   useEffect(() => {
     async function fetchLocations() {
       try {
-        const res = await fetch('/api/locations');
+        const res = await fetch("/api/locations");
         if (res.ok) {
           const data = await res.json();
           setLocations(data);
         }
       } catch (err) {
-        console.error('Failed to fetch locations', err);
+        console.error("Failed to fetch locations", err);
       }
     }
     fetchLocations();
@@ -41,16 +55,16 @@ export default function InventoryPage() {
   const fetchInventory = async () => {
     setIsLoading(true);
     try {
-      const url = selectedLocation 
-        ? `/api/inventory?location=${selectedLocation}` 
-        : '/api/inventory';
+      const url = selectedLocation
+        ? `/api/inventory?location=${selectedLocation}`
+        : "/api/inventory";
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setInventory(data);
       }
     } catch (err) {
-      console.error('Failed to fetch inventory', err);
+      console.error("Failed to fetch inventory", err);
     } finally {
       setIsLoading(false);
     }
@@ -64,10 +78,14 @@ export default function InventoryPage() {
     <div className="max-w-7xl mx-auto">
       <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Gerenciamento de Estoque</h1>
-          <p className="mt-2 text-slate-600">Acompanhe os níveis de estoque em todos os locais.</p>
+          <h1 className="text-3xl font-bold text-slate-900">
+            Gerenciamento de Estoque
+          </h1>
+          <p className="mt-2 text-slate-600">
+            Acompanhe os níveis de estoque em todos os locais.
+          </p>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <MapPin className="h-5 w-5 text-slate-400" />
@@ -79,7 +97,8 @@ export default function InventoryPage() {
               <option value="">Todos os Locais</option>
               {locations.map((loc) => (
                 <option key={loc._id} value={loc._id}>
-                  {loc.name} ({loc.type === 'central' ? 'central' : 'dependência'})
+                  {loc.name} (
+                  {loc.type === "central" ? "central" : "dependência"})
                 </option>
               ))}
             </select>
@@ -105,8 +124,13 @@ export default function InventoryPage() {
         ) : inventory.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-slate-500">
             <Package className="h-12 w-12 text-slate-300 mb-4" />
-            <p className="text-lg font-medium text-slate-900">Nenhum estoque encontrado</p>
-            <p className="mt-1">O estoque é inicializado automaticamente quando contratos são criados.</p>
+            <p className="text-lg font-medium text-slate-900">
+              Nenhum estoque encontrado
+            </p>
+            <p className="mt-1">
+              O estoque é inicializado automaticamente quando contratos são
+              criados.
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -120,36 +144,53 @@ export default function InventoryPage() {
                   <th className="px-6 py-4 font-medium">Unidade</th>
                   <th className="px-6 py-4 font-medium">Local</th>
                   <th className="px-6 py-4 font-medium">Em Estoque</th>
-                  {(canEditThreshold || canAdjustInventory) && <th className="px-6 py-4 font-medium text-right">Ações</th>}
+                  {(canEditThreshold || canAdjustInventory) && (
+                    <th className="px-6 py-4 font-medium text-right">Ações</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {inventory.map((item) => (
-                  <tr key={item._id} className="hover:bg-slate-50 transition-colors">
+                  <tr
+                    key={item._id}
+                    className="hover:bg-slate-50 transition-colors"
+                  >
                     <td className="px-6 py-4 font-medium text-slate-900">
-                      {item.product?.name || 'Produto Desconhecido'}
+                      {item.product?.name || "Produto Desconhecido"}
                     </td>
                     <td className="px-6 py-4 text-slate-600">
-                      {item.product?.brand || '-'}
+                      {item.product?.brand || "-"}
                     </td>
                     <td className="px-6 py-4 text-slate-600">
-                      {item.product?.supplier?.alias || item.product?.supplier?.name || '-'}
+                      {item.product?.supplier?.alias ||
+                        item.product?.supplier?.name ||
+                        "-"}
                     </td>
                     <td className="px-6 py-4 capitalize">
-                      {item.product?.category === 'meal' ? 'alimentação' : item.product?.category === 'office' ? 'escritório' : 'N/A'}
+                      {item.product?.category === "meal"
+                        ? "alimentação"
+                        : item.product?.category === "office"
+                          ? "escritório"
+                          : "N/A"}
                     </td>
                     <td className="px-6 py-4 text-slate-600">
-                      {item.product?.unit || '-'}
+                      {item.product?.unit || "-"}
                     </td>
                     <td className="px-6 py-4">
-                      {item.location?.name || 'Local Desconhecido'}
+                      {item.location?.name || "Local Desconhecido"}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        item.quantity > (item.product?.lowInventoryThreshold ?? settings.lowInventoryThreshold) ? 'bg-emerald-100 text-emerald-800' :
-                        item.quantity > 0 ? 'bg-amber-100 text-amber-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          item.quantity >
+                          (item.product?.lowInventoryThreshold ??
+                            settings.lowInventoryThreshold)
+                            ? "bg-emerald-100 text-emerald-800"
+                            : item.quantity > 0
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-red-100 text-red-800"
+                        }`}
+                      >
                         {item.quantity}
                       </span>
                     </td>
@@ -169,7 +210,7 @@ export default function InventoryPage() {
                             <button
                               onClick={() => setEditingProduct(item.product)}
                               className="text-slate-400 hover:text-emerald-600 transition-colors"
-                              title="Editar Alerta de Estoque"
+                              title="Editar Produto"
                             >
                               <Edit className="h-4 w-4" />
                             </button>
