@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import jwt from "jsonwebtoken";
-import dbConnect from "@/lib/mongodb";
-import { User } from "@/lib/models";
 
 export async function GET() {
+  console.log("GET /api/auth/me called");
   try {
     // Bypassing auth for development
+    console.log("Returning dev user");
     return NextResponse.json({
       authenticated: true,
       user: {
@@ -18,6 +16,7 @@ export async function GET() {
       },
     });
   } catch (error) {
+    console.error("Error in /api/auth/me:", error);
     return NextResponse.json({ authenticated: false }, { status: 401 });
   }
 }

@@ -38,10 +38,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchUser = async () => {
+    console.log("fetchUser called");
     try {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
+      console.log("fetching /api/auth/me");
+      const res = await fetch(`/api/auth/me?t=${Date.now()}`, {
+        credentials: "include",
+      });
+      console.log("fetch response status:", res.status);
       if (res.ok) {
         const data = await res.json();
+        console.log("fetch response data:", data);
         if (data.authenticated) {
           setUser(data.user);
         } else {
@@ -54,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to fetch user", error);
       setUser(null);
     } finally {
+      console.log("fetchUser finally, setting isLoading to false");
       setIsLoading(false);
     }
   };
