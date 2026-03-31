@@ -5,6 +5,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useSettings } from "@/components/SettingsProvider";
 import {
   BarChart3,
+  Download,
   Printer,
   Loader2,
   Package,
@@ -173,6 +174,8 @@ export default function ReportsPage() {
         "Local",
         "Registrado Por",
         "Observações",
+        "Valor Unit.",
+        "Valor Total",
       ];
       rows = data.map((item) => [
         new Date(item.createdAt).toLocaleDateString("pt-BR"),
@@ -181,13 +184,30 @@ export default function ReportsPage() {
         item.location?.name || "N/A",
         item.consumedBy?.name || "N/A",
         item.notes || "",
+        `R$ ${(item.product?.price || 0).toFixed(2).replace(".", ",")}`,
+        `R$ ${(item.quantity * (item.product?.price || 0)).toFixed(2).replace(".", ",")}`,
+      ]);
+      const totalValue = data.reduce(
+        (sum, item) => sum + item.quantity * (item.product?.price || 0),
+        0,
+      );
+      rows.push([
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "Total Geral:",
+        `R$ ${totalValue.toFixed(2).replace(".", ",")}`,
       ]);
     } else if (reportType === "orders") {
-      headers = ["Data", "Fornecedor", "Status", "Valor Total", "Itens"];
+      headers = ["Data", "Fornecedor", "Status", "Itens", "Valor Total"];
       rows = data.map((item) => {
         const totalValue =
           item.items?.reduce(
-            (sum: number, i: any) => sum + i.quantity * (i.pricePerUnit || 0),
+            (sum: number, i: any) =>
+              sum + i.quantity * (i.pricePerUnit || i.product?.price || 0),
             0,
           ) || 0;
         const supplierName =
@@ -195,23 +215,69 @@ export default function ReportsPage() {
         return [
           new Date(item.createdAt).toLocaleDateString("pt-BR"),
           supplierName,
-          item.status,
-          totalValue.toFixed(2),
+          item.status === "delivered"
+            ? "Entregue"
+            : item.status === "pending"
+              ? "Pendente"
+              : item.status,
           item.items?.length || 0,
+          `R$ ${totalValue.toFixed(2).replace(".", ",")}`,
         ];
       });
+      const totalValue = data.reduce(
+        (sum, item) =>
+          sum +
+          (item.items?.reduce(
+            (s: number, i: any) =>
+              s + i.quantity * (i.pricePerUnit || i.product?.price || 0),
+            0,
+          ) || 0),
+        0,
+      );
+      rows.push([
+        "",
+        "",
+        "",
+        "Total Geral:",
+        `R$ ${totalValue.toFixed(2).replace(".", ",")}`,
+      ]);
     } else if (reportType === "shipments") {
-      headers = ["Data", "Origem", "Destino", "Status", "Itens"];
-      rows = data.map((item) => [
-        new Date(item.createdAt).toLocaleDateString("pt-BR"),
-        item.fromLocation?.name || "N/A",
-        item.toLocation?.name || "N/A",
-        item.status === "completed"
-          ? "Concluída"
-          : item.status === "pending"
-            ? "Pendente"
-            : item.status,
-        item.items?.length || 0,
+      headers = ["Data", "Origem", "Destino", "Status", "Itens", "Valor Total"];
+      rows = data.map((item) => {
+        const totalValue =
+          item.items?.reduce(
+            (sum: number, i: any) => sum + i.quantity * (i.product?.price || 0),
+            0,
+          ) || 0;
+        return [
+          new Date(item.createdAt).toLocaleDateString("pt-BR"),
+          item.fromLocation?.name || "N/A",
+          item.toLocation?.name || "N/A",
+          item.status === "completed"
+            ? "Concluída"
+            : item.status === "pending"
+              ? "Pendente"
+              : item.status,
+          item.items?.length || 0,
+          `R$ ${totalValue.toFixed(2).replace(".", ",")}`,
+        ];
+      });
+      const totalValue = data.reduce(
+        (sum, item) =>
+          sum +
+          (item.items?.reduce(
+            (s: number, i: any) => s + i.quantity * (i.product?.price || 0),
+            0,
+          ) || 0),
+        0,
+      );
+      rows.push([
+        "",
+        "",
+        "",
+        "",
+        "Total Geral:",
+        `R$ ${totalValue.toFixed(2).replace(".", ",")}`,
       ]);
     }
 
@@ -275,9 +341,15 @@ export default function ReportsPage() {
       styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [16, 185, 129] }, // Emerald 500
       didParseCell: function (data) {
-        if (reportType === "inventory" && data.row.index === rows.length - 1) {
-          data.cell.styles.fontStyle = "bold";
-          data.cell.styles.fillColor = [241, 245, 249];
+        if (
+          data.row.index === rows.length - 1 &&
+          data.cell.raw &&
+          String(data.cell.raw).includes("Total Geral")
+        ) {
+          Object.values(data.row.cells).forEach((c: any) => {
+            c.styles.fontStyle = "bold";
+            c.styles.fillColor = [241, 245, 249];
+          });
         }
       },
     });
@@ -516,6 +588,12 @@ export default function ReportsPage() {
                         <th className="px-4 py-3 font-medium text-right">
                           Qtd
                         </th>
+                        <th className="px-4 py-3 font-medium text-right">
+                          Valor Unit.
+                        </th>
+                        <th className="px-4 py-3 font-medium text-right">
+                          Valor Total
+                        </th>
                       </tr>
                     )}
                     {reportType === "orders" && (
@@ -524,7 +602,7 @@ export default function ReportsPage() {
                         <th className="px-4 py-3 font-medium">Fornecedor</th>
                         <th className="px-4 py-3 font-medium">Status</th>
                         <th className="px-4 py-3 font-medium text-right">
-                          Valor
+                          Valor Total
                         </th>
                       </tr>
                     )}
@@ -534,6 +612,9 @@ export default function ReportsPage() {
                         <th className="px-4 py-3 font-medium">Origem</th>
                         <th className="px-4 py-3 font-medium">Destino</th>
                         <th className="px-4 py-3 font-medium">Status</th>
+                        <th className="px-4 py-3 font-medium text-right">
+                          Valor Total
+                        </th>
                       </tr>
                     )}
                   </thead>
@@ -590,6 +671,18 @@ export default function ReportsPage() {
                             <td className="px-4 py-3 text-right font-medium text-emerald-600">
                               -{item.quantity} {item.product?.unit}
                             </td>
+                            <td className="px-4 py-3 text-right">
+                              R${" "}
+                              {(item.product?.price || 0)
+                                .toFixed(2)
+                                .replace(".", ",")}
+                            </td>
+                            <td className="px-4 py-3 text-right font-medium text-slate-900">
+                              R${" "}
+                              {(item.quantity * (item.product?.price || 0))
+                                .toFixed(2)
+                                .replace(".", ",")}
+                            </td>
                           </>
                         )}
                         {reportType === "orders" && (
@@ -626,10 +719,14 @@ export default function ReportsPage() {
                               {(
                                 item.items?.reduce(
                                   (sum: number, i: any) =>
-                                    sum + i.quantity * (i.pricePerUnit || 0),
+                                    sum +
+                                    i.quantity *
+                                      (i.pricePerUnit || i.product?.price || 0),
                                   0,
                                 ) || 0
-                              ).toFixed(2)}
+                              )
+                                .toFixed(2)
+                                .replace(".", ",")}
                             </td>
                           </>
                         )}
@@ -667,29 +764,115 @@ export default function ReportsPage() {
                                     : item.status}
                               </span>
                             </td>
+                            <td className="px-4 py-3 text-right font-medium">
+                              R${" "}
+                              {(
+                                item.items?.reduce(
+                                  (sum: number, i: any) =>
+                                    sum + i.quantity * (i.product?.price || 0),
+                                  0,
+                                ) || 0
+                              )
+                                .toFixed(2)
+                                .replace(".", ",")}
+                            </td>
                           </>
                         )}
                       </tr>
                     ))}
                   </tbody>
-                  {reportType === "inventory" && data.length > 0 && (
+                  {data.length > 0 && (
                     <tfoot className="bg-slate-50 font-semibold text-slate-900 border-t border-slate-200">
                       <tr>
-                        <td colSpan={5} className="px-4 py-3 text-right">
-                          Total Geral:
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          R${" "}
-                          {data
-                            .reduce(
-                              (sum, item) =>
-                                sum +
-                                item.quantity * (item.product?.price || 0),
-                              0,
-                            )
-                            .toFixed(2)
-                            .replace(".", ",")}
-                        </td>
+                        {reportType === "inventory" && (
+                          <>
+                            <td colSpan={5} className="px-4 py-3 text-right">
+                              Total Geral:
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              R${" "}
+                              {data
+                                .reduce(
+                                  (sum, item) =>
+                                    sum +
+                                    item.quantity * (item.product?.price || 0),
+                                  0,
+                                )
+                                .toFixed(2)
+                                .replace(".", ",")}
+                            </td>
+                          </>
+                        )}
+                        {reportType === "consumption" && (
+                          <>
+                            <td colSpan={5} className="px-4 py-3 text-right">
+                              Total Geral:
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              R${" "}
+                              {data
+                                .reduce(
+                                  (sum, item) =>
+                                    sum +
+                                    item.quantity * (item.product?.price || 0),
+                                  0,
+                                )
+                                .toFixed(2)
+                                .replace(".", ",")}
+                            </td>
+                          </>
+                        )}
+                        {reportType === "orders" && (
+                          <>
+                            <td colSpan={3} className="px-4 py-3 text-right">
+                              Total Geral:
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              R${" "}
+                              {data
+                                .reduce(
+                                  (sum, item) =>
+                                    sum +
+                                    (item.items?.reduce(
+                                      (s: number, i: any) =>
+                                        s +
+                                        i.quantity *
+                                          (i.pricePerUnit ||
+                                            i.product?.price ||
+                                            0),
+                                      0,
+                                    ) || 0),
+                                  0,
+                                )
+                                .toFixed(2)
+                                .replace(".", ",")}
+                            </td>
+                          </>
+                        )}
+                        {reportType === "shipments" && (
+                          <>
+                            <td colSpan={4} className="px-4 py-3 text-right">
+                              Total Geral:
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              R${" "}
+                              {data
+                                .reduce(
+                                  (sum, item) =>
+                                    sum +
+                                    (item.items?.reduce(
+                                      (s: number, i: any) =>
+                                        s +
+                                        i.quantity * (i.product?.price || 0),
+                                      0,
+                                    ) || 0),
+                                  0,
+                                )
+                                .toFixed(2)
+                                .replace(".", ",")}
+                            </td>
+                          </>
+                        )}
                       </tr>
                     </tfoot>
                   )}

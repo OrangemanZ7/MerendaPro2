@@ -1,19 +1,35 @@
-import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/mongodb';
-import { Product, User, Settings } from '@/lib/models';
-import { cookies } from 'next/headers';
-import * as jose from 'jose';
+import { NextResponse } from "next/server";
+import dbConnect from "@/lib/mongodb";
+import { Product, User, Settings } from "@/lib/models";
+import { cookies } from "next/headers";
+import * as jose from "jose";
 
 export async function GET(request: Request) {
   try {
     await dbConnect();
     const { searchParams } = new URL(request.url);
-    const category = searchParams.get('category');
-    
+    const category = searchParams.get("category");
+
     const query = category ? { category } : {};
-    const products = await Product.find(query).sort({ name: 1 });
-    
-    return NextResponse.json(products);
+    const products = await Product.find(query)
+      .populate("contract")
+      .sort({ name: 1 })
+      .lean();
+
+    // Ensure price is set correctly from contract if it's 0
+    const processedProducts = products.map((product: any) => {
+      if ((!product.price || product.price === 0) && product.contract) {
+        const contractItem = product.contract.items?.find(
+          (i: any) => i.product?.toString() === product._id.toString(),
+        );
+        if (contractItem && contractItem.pricePerUnit) {
+          product.price = contractItem.pricePerUnit;
+        }
+      }
+      return product;
+    });
+
+    return NextResponse.json(processedProducts);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -22,27 +38,34 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await dbConnect();
-    
+
     const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
+    const token = cookieStore.get("auth_token")?.value;
 
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback_secret');
+    const secret = new TextEncoder().encode(
+      process.env.JWT_SECRET || "fallback_secret",
+    );
     const { payload } = await jose.jwtVerify(token, secret);
-    
+
     const user = await User.findOne({ email: payload.email });
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const settings = await Settings.findOne();
-    const canCreate = user.role === 'admin' || settings?.rolePermissions?.[user.role]?.products?.create;
+    const canCreate =
+      user.role === "admin" ||
+      settings?.rolePermissions?.[user.role]?.products?.create;
 
     if (!canCreate) {
-      return NextResponse.json({ error: 'Forbidden: You do not have permission to create products' }, { status: 403 });
+      return NextResponse.json(
+        { error: "Forbidden: You do not have permission to create products" },
+        { status: 403 },
+      );
     }
 
     const body = await request.json();
