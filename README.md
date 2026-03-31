@@ -13,13 +13,14 @@ Backend: Node.js para processamento de regras de negócio.
 Infraestrutura: Google Cloud Platform (GCP), Cloud Run e Docker.
 Base de Dados: MongoDB.
 
-
 🚀 Como Visualizar
 A aplicação está disponível em ambiente de produção:
 https://ai.studio/apps/76767241-1599-4655-a53c-c651dbf3dfd3
 
 ## Run Locally
-**Prerequisites:**  Node.js
+
+**Prerequisites:** Node.js
+
 1. Install dependencies:
    `npm install`
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
