@@ -7,7 +7,10 @@ export async function GET() {
   try {
     await dbConnect();
     const contracts = await Contract.find({})
-      .populate("items.product")
+      .populate({
+        path: "items.product",
+        populate: { path: "unitType" },
+      })
       .populate("supplier")
       .sort({ createdAt: -1 });
     return NextResponse.json(contracts);
@@ -30,7 +33,10 @@ export async function POST(request: Request) {
           name: item.name,
           brand: item.brand || "",
           category: item.category,
-          unit: item.unit,
+          unit: item.unit || "",
+          unitType: item.unitType,
+          packageType: item.packageType,
+          quantityPerPackage: item.quantityPerPackage,
           price: item.pricePerUnit, // Set the price from the contract
           supplier: body.supplier,
           contract: contractId,

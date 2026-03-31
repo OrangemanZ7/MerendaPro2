@@ -56,17 +56,30 @@ export const Supplier = models.Supplier || model("Supplier", SupplierSchema);
 
 // --- Product Schema ---
 // Represents an item (meal ingredient or office supply)
+const UnitTypeSchema = new Schema(
+  {
+    name: { type: String, required: true },
+    abbreviation: { type: String, required: true },
+  },
+  { timestamps: true },
+);
+
+export const UnitType = models.UnitType || model("UnitType", UnitTypeSchema);
+
 const ProductSchema = new Schema(
   {
     name: { type: String, required: true },
     brand: { type: String },
     category: { type: String, enum: ["meal", "office"], required: true },
-    unit: { type: String, required: true }, // e.g., kg, liters, units, boxes
-    price: { type: Number, default: 0 }, // Unit price for inventory valuation
+    unit: { type: String }, // Legacy field, kept for backward compatibility
+    unitType: { type: Schema.Types.ObjectId, ref: "UnitType" }, // e.g., Kg, L, units
+    packageType: { type: String }, // e.g., Pacote, Caixa, Garrafa
+    quantityPerPackage: { type: Number, default: 1 }, // e.g., 5 (for a 5kg bag)
+    price: { type: Number, default: 0 }, // Unit price for inventory valuation (Price per BASE UNIT)
     description: { type: String },
     supplier: { type: Schema.Types.ObjectId, ref: "Supplier" },
     contract: { type: Schema.Types.ObjectId, ref: "Contract" },
-    lowInventoryThreshold: { type: Number }, // Product-specific threshold
+    lowInventoryThreshold: { type: Number }, // Product-specific threshold in BASE UNITS
   },
   { timestamps: true },
 );

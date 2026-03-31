@@ -110,10 +110,10 @@ export default function OrdersPage() {
         doc.addImage(
           settings.logoUrl,
           "PNG",
-          16,
-          12,
-          24,
-          24,
+          14,
+          10,
+          18,
+          18,
           undefined,
           "FAST",
         );
@@ -124,7 +124,7 @@ export default function OrdersPage() {
 
     doc.setFontSize(18);
     const titleY = settings.logoUrl ? 18 : 20;
-    const titleX = settings.logoUrl ? 44 : 14;
+    const titleX = settings.logoUrl ? 36 : 14;
 
     doc.text(`Pedido de Compra: ${order.orderNumber}`, titleX, titleY);
 
@@ -142,9 +142,9 @@ export default function OrdersPage() {
       titleY + 16,
     );
     doc.text(
-      `Estado: ${order.status === "received" ? "Recebido" : order.status === "pending" ? "Pendente" : "Cancelado"}`,
-      titleX + 120,
-      titleY + 16,
+      `Status: ${order.status === "received" ? "Recebido" : order.status === "pending" ? "Pendente" : "Cancelado"}`,
+      titleX,
+      titleY + 21,
     );
 
     const headers = [
@@ -159,14 +159,20 @@ export default function OrdersPage() {
       item.product?.name || "Desconhecido",
       item.product?.brand || "-",
       item.quantity || 0,
-      item.product?.unit || "-",
-      `R$ ${(item.pricePerUnit || 0).toFixed(2).replace(".", ",")}`,
-      `R$ ${((item.quantity || 0) * (item.pricePerUnit || 0)).toFixed(2).replace(".", ",")}`,
+      item.product?.packageType
+        ? item.product.packageType
+        : item.product?.unitType?.abbreviation || item.product?.unit || "-",
+      `R$ ${(item.pricePerUnit || (item.product?.price || 0) * (item.product?.quantityPerPackage || 1)).toFixed(2).replace(".", ",")}`,
+      `R$ ${((item.quantity || 0) * (item.pricePerUnit || (item.product?.price || 0) * (item.product?.quantityPerPackage || 1))).toFixed(2).replace(".", ",")}`,
     ]);
 
     const totalOrderValue = order.items.reduce(
       (acc: number, item: any) =>
-        acc + (item.quantity || 0) * (item.pricePerUnit || 0),
+        acc +
+        (item.quantity || 0) *
+          (item.pricePerUnit ||
+            (item.product?.price || 0) *
+              (item.product?.quantityPerPackage || 1)),
       0,
     );
 
@@ -182,16 +188,12 @@ export default function OrdersPage() {
     autoTable(doc, {
       head: [headers],
       body: rows,
-      startY: settings.logoUrl ? 40 : 40,
+      startY: settings.logoUrl ? 44 : 40,
       theme: "grid",
-      styles: { fontSize: 10, cellPadding: 1.5 },
-      headStyles: {
-        fillColor: [25, 43, 93],
-        cellPadding: 2.5,
-        halign: "center",
-      },
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [16, 185, 129] },
       footStyles: {
-        fillColor: [251, 247, 236],
+        fillColor: [241, 245, 249],
         textColor: [15, 23, 42],
         fontStyle: "bold",
       },
@@ -463,19 +465,32 @@ export default function OrdersPage() {
                                           </td>
                                         )}
                                         <td className="px-4 py-3">
-                                          {item.product?.unit || "-"}
+                                          {item.product?.packageType
+                                            ? item.product.packageType
+                                            : item.product?.unitType
+                                                ?.abbreviation ||
+                                              item.product?.unit ||
+                                              "-"}
                                         </td>
                                         <td className="px-4 py-3">
                                           R${" "}
-                                          {item.pricePerUnit
-                                            ?.toFixed(2)
-                                            .replace(".", ",") || "0,00"}
+                                          {(
+                                            item.pricePerUnit ||
+                                            (item.product?.price || 0) *
+                                              (item.product
+                                                ?.quantityPerPackage || 1)
+                                          )
+                                            .toFixed(2)
+                                            .replace(".", ",")}
                                         </td>
                                         <td className="px-4 py-3 font-medium">
                                           R${" "}
                                           {(
                                             (item.quantity || 0) *
-                                            (item.pricePerUnit || 0)
+                                            (item.pricePerUnit ||
+                                              (item.product?.price || 0) *
+                                                (item.product
+                                                  ?.quantityPerPackage || 1))
                                           )
                                             .toFixed(2)
                                             .replace(".", ",")}

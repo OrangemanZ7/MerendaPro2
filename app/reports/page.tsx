@@ -207,7 +207,11 @@ export default function ReportsPage() {
         const totalValue =
           item.items?.reduce(
             (sum: number, i: any) =>
-              sum + i.quantity * (i.pricePerUnit || i.product?.price || 0),
+              sum +
+              i.quantity *
+                (i.pricePerUnit ||
+                  (i.product?.price || 0) *
+                    (i.product?.quantityPerPackage || 1)),
             0,
           ) || 0;
         const supplierName =
@@ -229,7 +233,11 @@ export default function ReportsPage() {
           sum +
           (item.items?.reduce(
             (s: number, i: any) =>
-              s + i.quantity * (i.pricePerUnit || i.product?.price || 0),
+              s +
+              i.quantity *
+                (i.pricePerUnit ||
+                  (i.product?.price || 0) *
+                    (i.product?.quantityPerPackage || 1)),
             0,
           ) || 0),
         0,
@@ -639,7 +647,9 @@ export default function ReportsPage() {
                               {item.location?.name || "N/A"}
                             </td>
                             <td className="px-4 py-3 text-right font-medium">
-                              {item.quantity} {item.product?.unit}
+                              {item.quantity}{" "}
+                              {item.product?.unitType?.abbreviation ||
+                                item.product?.unit}
                             </td>
                             <td className="px-4 py-3 text-right">
                               R${" "}
@@ -669,7 +679,9 @@ export default function ReportsPage() {
                               {item.location?.name || "N/A"}
                             </td>
                             <td className="px-4 py-3 text-right font-medium text-emerald-600">
-                              -{item.quantity} {item.product?.unit}
+                              -{item.quantity}{" "}
+                              {item.product?.unitType?.abbreviation ||
+                                item.product?.unit}
                             </td>
                             <td className="px-4 py-3 text-right">
                               R${" "}
@@ -721,7 +733,9 @@ export default function ReportsPage() {
                                   (sum: number, i: any) =>
                                     sum +
                                     i.quantity *
-                                      (i.pricePerUnit || i.product?.price || 0),
+                                      (i.pricePerUnit ||
+                                        (i.product?.price || 0) *
+                                          (i.product?.quantityPerPackage || 1)),
                                   0,
                                 ) || 0
                               )
@@ -838,8 +852,9 @@ export default function ReportsPage() {
                                         s +
                                         i.quantity *
                                           (i.pricePerUnit ||
-                                            i.product?.price ||
-                                            0),
+                                            (i.product?.price || 0) *
+                                              (i.product?.quantityPerPackage ||
+                                                1)),
                                       0,
                                     ) || 0),
                                   0,

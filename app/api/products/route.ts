@@ -13,6 +13,7 @@ export async function GET(request: Request) {
     const query = category ? { category } : {};
     const products = await Product.find(query)
       .populate("contract")
+      .populate("unitType")
       .sort({ name: 1 })
       .lean();
 

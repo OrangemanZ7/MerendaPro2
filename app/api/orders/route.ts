@@ -22,7 +22,11 @@ export async function GET(request: Request) {
       })
       .populate({
         path: "items.product",
-        populate: [{ path: "supplier" }, { path: "contract" }],
+        populate: [
+          { path: "supplier" },
+          { path: "contract" },
+          { path: "unitType" },
+        ],
       })
       .sort({ createdAt: -1 })
       .lean();

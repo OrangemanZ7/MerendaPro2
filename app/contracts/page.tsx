@@ -227,7 +227,12 @@ export default function ContractsPage() {
                                             {item.product?.brand || "-"}
                                           </td>
                                           <td className="px-4 py-3">
-                                            {item.product?.unit || "-"}
+                                            {item.product?.packageType
+                                              ? `1 ${item.product.packageType} de ${item.product.quantityPerPackage} ${item.product.unitType?.abbreviation || item.product.unit}`
+                                              : item.product?.unitType
+                                                  ?.abbreviation ||
+                                                item.product?.unit ||
+                                                "-"}
                                           </td>
                                           <td className="px-4 py-3 text-right">
                                             R${" "}

@@ -18,7 +18,11 @@ export async function GET(request: Request) {
       .populate("location")
       .populate({
         path: "product",
-        populate: [{ path: "supplier" }, { path: "contract" }],
+        populate: [
+          { path: "supplier" },
+          { path: "contract" },
+          { path: "unitType" },
+        ],
       })
       .sort({ "location.name": 1, "product.name": 1 })
       .lean();

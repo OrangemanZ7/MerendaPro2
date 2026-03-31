@@ -29,12 +29,15 @@ export default function InventoryPage() {
 
   const canEditThreshold =
     user?.role === "admin" ||
+    user?.role === "manager" ||
     settings.rolePermissions?.[user?.role || ""]?.products?.update;
   const canAdjustInventory =
     user?.role === "admin" ||
+    user?.role === "manager" ||
     settings.rolePermissions?.[user?.role || ""]?.adjustments?.create;
   const canCreateProduct =
     user?.role === "admin" ||
+    user?.role === "manager" ||
     settings.rolePermissions?.[user?.role || ""]?.products?.create;
 
   useEffect(() => {
@@ -174,7 +177,9 @@ export default function InventoryPage() {
                           : "N/A"}
                     </td>
                     <td className="px-6 py-4 text-slate-600">
-                      {item.product?.unit || "-"}
+                      {item.product?.unitType
+                        ? `${item.product.packageType} (${item.product.quantityPerPackage} ${item.product.unitType.abbreviation})`
+                        : item.product?.unit || "-"}
                     </td>
                     <td className="px-6 py-4">
                       {item.location?.name || "Local Desconhecido"}
@@ -191,8 +196,21 @@ export default function InventoryPage() {
                               : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {item.quantity}
+                        {item.quantity}{" "}
+                        {item.product?.unitType?.abbreviation ||
+                          item.product?.unit ||
+                          ""}
                       </span>
+                      {item.product?.unitType &&
+                        item.product?.quantityPerPackage > 0 && (
+                          <div className="text-xs text-slate-500 mt-1">
+                            (
+                            {(
+                              item.quantity / item.product.quantityPerPackage
+                            ).toFixed(1)}{" "}
+                            {item.product.packageType}s)
+                          </div>
+                        )}
                     </td>
                     {(canEditThreshold || canAdjustInventory) && (
                       <td className="px-6 py-4 text-right">

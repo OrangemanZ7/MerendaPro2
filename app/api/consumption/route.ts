@@ -13,7 +13,11 @@ export async function GET(request: Request) {
     const consumptions = await Consumption.find(query)
       .populate({
         path: "product",
-        populate: [{ path: "supplier" }, { path: "contract" }],
+        populate: [
+          { path: "supplier" },
+          { path: "contract" },
+          { path: "unitType" },
+        ],
       })
       .populate("location")
       .populate("consumedBy", "name email")

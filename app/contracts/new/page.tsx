@@ -1,41 +1,58 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useRouter } from 'next/navigation';
-import { Plus, Trash2, ArrowLeft, Save, Loader2, Calculator } from 'lucide-react';
-import Link from 'next/link';
+import { useState, useEffect } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useRouter } from "next/navigation";
+import {
+  Plus,
+  Trash2,
+  ArrowLeft,
+  Save,
+  Loader2,
+  Calculator,
+} from "lucide-react";
+import Link from "next/link";
 
-const contractSchema = z.object({
-  contractNumber: z.string().min(1, 'Número do contrato é obrigatório'),
-  supplier: z.string().min(1, 'Fornecedor é obrigatório'),
-  validFrom: z.string().min(1, 'Data de início é obrigatória'),
-  validUntil: z.string().min(1, 'Data de término é obrigatória'),
-  items: z.array(
-    z.object({
-      name: z.string().min(1, 'Nome do produto é obrigatório'),
-      brand: z.string().optional(),
-      category: z.enum(['meal', 'office']),
-      unit: z.string().min(1, 'Unidade é obrigatória'),
-      pricePerUnit: z.number().min(0.01, 'O preço deve ser maior que 0'),
-      maxQuantity: z.number().min(1, 'A quantidade deve ser pelo menos 1'),
-    })
-  ).min(1, 'Pelo menos um item é obrigatório'),
-}).refine((data) => new Date(data.validFrom) <= new Date(data.validUntil), {
-  message: "A data de término não pode ser anterior à data de início",
-  path: ["validUntil"],
-});
+const contractSchema = z
+  .object({
+    contractNumber: z.string().min(1, "Número do contrato é obrigatório"),
+    supplier: z.string().min(1, "Fornecedor é obrigatório"),
+    validFrom: z.string().min(1, "Data de início é obrigatória"),
+    validUntil: z.string().min(1, "Data de término é obrigatória"),
+    items: z
+      .array(
+        z.object({
+          name: z.string().min(1, "Nome do produto é obrigatório"),
+          brand: z.string().optional(),
+          category: z.enum(["meal", "office"]),
+          unit: z.string().optional(),
+          unitType: z.string().min(1, "Tipo de unidade é obrigatório"),
+          packageType: z.string().min(1, "Tipo de embalagem é obrigatório"),
+          quantityPerPackage: z
+            .number()
+            .min(0.01, "A quantidade por embalagem deve ser maior que 0"),
+          pricePerUnit: z.number().min(0.01, "O preço deve ser maior que 0"),
+          maxQuantity: z.number().min(1, "A quantidade deve ser pelo menos 1"),
+        }),
+      )
+      .min(1, "Pelo menos um item é obrigatório"),
+  })
+  .refine((data) => new Date(data.validFrom) <= new Date(data.validUntil), {
+    message: "A data de término não pode ser anterior à data de início",
+    path: ["validUntil"],
+  });
 
 type ContractFormValues = z.infer<typeof contractSchema>;
 
 export default function NewContractPage() {
   const router = useRouter();
   const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [unitTypes, setUnitTypes] = useState<any[]>([]);
   const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const {
     register,
@@ -46,57 +63,77 @@ export default function NewContractPage() {
   } = useForm<ContractFormValues>({
     resolver: zodResolver(contractSchema),
     defaultValues: {
-      contractNumber: '',
-      supplier: '',
-      validFrom: '',
-      validUntil: '',
-      items: [{ name: '', brand: '', category: 'meal', unit: '', pricePerUnit: 0, maxQuantity: 1 }],
+      contractNumber: "",
+      supplier: "",
+      validFrom: "",
+      validUntil: "",
+      items: [
+        {
+          name: "",
+          brand: "",
+          category: "meal",
+          unit: "",
+          unitType: "",
+          packageType: "",
+          quantityPerPackage: 1,
+          pricePerUnit: 0,
+          maxQuantity: 1,
+        },
+      ],
     },
   });
 
   const { fields, append, remove } = useFieldArray({
     control,
-    name: 'items',
+    name: "items",
   });
 
-  const watchItems = watch('items');
+  const watchItems = watch("items");
   const grandTotal = watchItems.reduce((sum, item) => {
-    return sum + ((item.pricePerUnit || 0) * (item.maxQuantity || 0));
+    return sum + (item.pricePerUnit || 0) * (item.maxQuantity || 0);
   }, 0);
 
   useEffect(() => {
-    async function fetchSuppliers() {
+    async function fetchData() {
       try {
-        const res = await fetch('/api/suppliers');
-        if (res.ok) {
-          const data = await res.json();
+        const [suppliersRes, unitTypesRes] = await Promise.all([
+          fetch("/api/suppliers"),
+          fetch("/api/unit-types"),
+        ]);
+
+        if (suppliersRes.ok) {
+          const data = await suppliersRes.json();
           setSuppliers(data);
         }
+        if (unitTypesRes.ok) {
+          const data = await unitTypesRes.json();
+          setUnitTypes(data);
+        }
       } catch (err) {
-        console.error('Failed to fetch suppliers', err);
+        console.error("Failed to fetch data", err);
       } finally {
         setIsLoadingSuppliers(false);
       }
     }
-    fetchSuppliers();
+    fetchData();
   }, []);
 
   const onSubmit = async (data: ContractFormValues) => {
     setIsSubmitting(true);
-    setError('');
+    setError("");
     try {
-      const res = await fetch('/api/contracts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/contracts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.error || 'Falha ao criar contrato');
+        throw new Error(errorData.error || "Falha ao criar contrato");
       }
 
-      router.push('/contracts');
+      router.push("/contracts");
       router.refresh();
     } catch (err: any) {
       setError(err.message);
@@ -112,8 +149,12 @@ export default function NewContractPage() {
             <ArrowLeft className="h-4 w-4 mr-1" />
             <Link href="/contracts">Voltar para Contratos</Link>
           </div>
-          <h1 className="text-3xl font-bold text-slate-900">Novo Contrato de Alimentação</h1>
-          <p className="mt-2 text-slate-600">Crie um novo contrato público para ingredientes de alimentação.</p>
+          <h1 className="text-3xl font-bold text-slate-900">
+            Novo Contrato de Alimentação
+          </h1>
+          <p className="mt-2 text-slate-600">
+            Crie um novo contrato público para ingredientes de alimentação.
+          </p>
         </div>
       </header>
 
@@ -127,28 +168,40 @@ export default function NewContractPage() {
         {/* Contract Details */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-slate-900">Detalhes do Contrato</h2>
+            <h2 className="text-xl font-semibold text-slate-900">
+              Detalhes do Contrato
+            </h2>
             <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100">
               <Calculator className="h-5 w-5" />
               <span className="font-medium">Valor Total:</span>
-              <span className="text-lg font-bold">R$ {grandTotal.toFixed(2).replace('.', ',')}</span>
+              <span className="text-lg font-bold">
+                R$ {grandTotal.toFixed(2).replace(".", ",")}
+              </span>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Número do Contrato</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Número do Contrato
+              </label>
               <input
-                {...register('contractNumber')}
+                {...register("contractNumber")}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 placeholder="ex: CTR-2026-001"
               />
-              {errors.contractNumber && <p className="mt-1 text-sm text-red-600">{errors.contractNumber.message}</p>}
+              {errors.contractNumber && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.contractNumber.message}
+                </p>
+              )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Fornecedor</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Fornecedor
+              </label>
               <select
-                {...register('supplier')}
+                {...register("supplier")}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
                 disabled={isLoadingSuppliers}
               >
@@ -159,27 +212,43 @@ export default function NewContractPage() {
                   </option>
                 ))}
               </select>
-              {errors.supplier && <p className="mt-1 text-sm text-red-600">{errors.supplier.message}</p>}
+              {errors.supplier && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.supplier.message}
+                </p>
+              )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Válido a partir de</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Válido a partir de
+              </label>
               <input
                 type="date"
-                {...register('validFrom')}
+                {...register("validFrom")}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
-              {errors.validFrom && <p className="mt-1 text-sm text-red-600">{errors.validFrom.message}</p>}
+              {errors.validFrom && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.validFrom.message}
+                </p>
+              )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Válido até</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Válido até
+              </label>
               <input
                 type="date"
-                {...register('validUntil')}
+                {...register("validUntil")}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
-              {errors.validUntil && <p className="mt-1 text-sm text-red-600">{errors.validUntil.message}</p>}
+              {errors.validUntil && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.validUntil.message}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -187,13 +256,25 @@ export default function NewContractPage() {
         {/* Contract Items */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-slate-900">Itens Contratados</h2>
+            <h2 className="text-xl font-semibold text-slate-900">
+              Itens Contratados
+            </h2>
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={(e) => {
                   e.preventDefault();
-                  append({ name: '', brand: '', category: 'meal', unit: '', pricePerUnit: 0, maxQuantity: 1 });
+                  append({
+                    name: "",
+                    brand: "",
+                    category: "meal",
+                    unit: "",
+                    unitType: "",
+                    packageType: "",
+                    quantityPerPackage: 1,
+                    pricePerUnit: 0,
+                    maxQuantity: 1,
+                  });
                 }}
                 className="flex items-center text-sm font-medium text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-md transition-colors"
               >
@@ -204,7 +285,9 @@ export default function NewContractPage() {
           </div>
 
           {errors.items?.root && (
-            <p className="mb-4 text-sm text-red-600">{errors.items.root.message}</p>
+            <p className="mb-4 text-sm text-red-600">
+              {errors.items.root.message}
+            </p>
           )}
 
           <div className="space-y-4">
@@ -214,10 +297,15 @@ export default function NewContractPage() {
               const subTotal = itemPrice * itemQty;
 
               return (
-                <div key={field.id} className="flex items-start gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-7 gap-4">
+                <div
+                  key={field.id}
+                  className="flex items-start gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200"
+                >
+                  <div className="flex-1 grid grid-cols-1 md:grid-cols-10 gap-4">
                     <div className="md:col-span-2">
-                      <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Nome do Produto</label>
+                      <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">
+                        Nome do Produto
+                      </label>
                       <input
                         type="text"
                         {...register(`items.${index}.name`)}
@@ -225,12 +313,16 @@ export default function NewContractPage() {
                         placeholder="ex: Arroz"
                       />
                       {errors.items?.[index]?.name && (
-                        <p className="mt-1 text-xs text-red-600">{errors.items[index]?.name?.message}</p>
+                        <p className="mt-1 text-xs text-red-600">
+                          {errors.items[index]?.name?.message}
+                        </p>
                       )}
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Marca</label>
+                    <div className="md:col-span-1">
+                      <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">
+                        Marca
+                      </label>
                       <input
                         type="text"
                         {...register(`items.${index}.brand`)}
@@ -239,8 +331,10 @@ export default function NewContractPage() {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Categoria</label>
+                    <div className="md:col-span-1">
+                      <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">
+                        Categoria
+                      </label>
                       <select
                         {...register(`items.${index}.category`)}
                         className="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
@@ -250,49 +344,119 @@ export default function NewContractPage() {
                       </select>
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Unidade</label>
-                      <input
-                        type="text"
-                        {...register(`items.${index}.unit`)}
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">
+                        Unidade Base
+                      </label>
+                      <select
+                        {...register(`items.${index}.unitType`)}
                         className="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-                        placeholder="ex: kg, caixa"
-                      />
-                      {errors.items?.[index]?.unit && (
-                        <p className="mt-1 text-xs text-red-600">{errors.items[index]?.unit?.message}</p>
+                      >
+                        <option value="">Selecione...</option>
+                        {unitTypes.map((ut) => (
+                          <option key={ut._id} value={ut._id}>
+                            {ut.name} ({ut.abbreviation})
+                          </option>
+                        ))}
+                      </select>
+                      {errors.items?.[index]?.unitType && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {errors.items[index]?.unitType?.message}
+                        </p>
                       )}
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Preço (R$)</label>
+                    <div className="md:col-span-1">
+                      <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">
+                        Embalagem
+                      </label>
+                      <select
+                        {...register(`items.${index}.packageType`)}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                      >
+                        <option value="">Selecione...</option>
+                        <option value="Saco">Saco</option>
+                        <option value="Caixa">Caixa</option>
+                        <option value="Garrafa">Garrafa</option>
+                        <option value="Lata">Lata</option>
+                        <option value="Pacote">Pacote</option>
+                        <option value="Unidade">Unidade</option>
+                        <option value="Fardo">Fardo</option>
+                        <option value="Galão">Galão</option>
+                      </select>
+                      {errors.items?.[index]?.packageType && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {errors.items[index]?.packageType?.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="md:col-span-1">
+                      <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">
+                        Qtd/Emb.
+                      </label>
                       <input
                         type="number"
                         step="0.01"
-                        {...register(`items.${index}.pricePerUnit`, { valueAsNumber: true })}
+                        {...register(`items.${index}.quantityPerPackage`, {
+                          valueAsNumber: true,
+                        })}
                         className="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        placeholder="Ex: 5"
                       />
-                      {errors.items?.[index]?.pricePerUnit && (
-                        <p className="mt-1 text-xs text-red-600">{errors.items[index]?.pricePerUnit?.message}</p>
+                      {errors.items?.[index]?.quantityPerPackage && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {errors.items[index]?.quantityPerPackage?.message}
+                        </p>
                       )}
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Quantidade</label>
+                    <div className="md:col-span-1">
+                      <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">
+                        Preço/Emb. (R$)
+                      </label>
                       <input
                         type="number"
-                        {...register(`items.${index}.maxQuantity`, { valueAsNumber: true })}
+                        step="0.01"
+                        {...register(`items.${index}.pricePerUnit`, {
+                          valueAsNumber: true,
+                        })}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                      {errors.items?.[index]?.pricePerUnit && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {errors.items[index]?.pricePerUnit?.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="md:col-span-1">
+                      <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">
+                        Qtd. Emb.
+                      </label>
+                      <input
+                        type="number"
+                        {...register(`items.${index}.maxQuantity`, {
+                          valueAsNumber: true,
+                        })}
                         className="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                       {errors.items?.[index]?.maxQuantity && (
-                        <p className="mt-1 text-xs text-red-600">{errors.items[index]?.maxQuantity?.message}</p>
+                        <p className="mt-1 text-xs text-red-600">
+                          {errors.items[index]?.maxQuantity?.message}
+                        </p>
                       )}
                     </div>
                   </div>
 
                   <div className="flex flex-col items-end justify-between self-stretch pt-6">
                     <div className="text-right mb-2">
-                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Sub-total</p>
-                      <p className="text-sm font-semibold text-slate-900">R$ {subTotal.toFixed(2).replace('.', ',')}</p>
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Sub-total
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900">
+                        R$ {subTotal.toFixed(2).replace(".", ",")}
+                      </p>
                     </div>
                     <button
                       type="button"

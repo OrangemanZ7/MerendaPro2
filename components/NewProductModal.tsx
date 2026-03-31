@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,7 +10,10 @@ const productSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   brand: z.string().optional(),
   category: z.enum(["meal", "office"]),
-  unit: z.string().min(1, "Unidade é obrigatória"),
+  unit: z.string().optional(), // Legacy
+  unitType: z.string().min(1, "Unidade Base é obrigatória"),
+  packageType: z.string().min(1, "Tipo de Embalagem é obrigatório"),
+  quantityPerPackage: z.number().min(0.01, "Quantidade deve ser maior que 0"),
   price: z.number().min(0, "O preço deve ser maior ou igual a 0").optional(),
   description: z.string().optional(),
   lowInventoryThreshold: z
@@ -36,6 +39,18 @@ export default function NewProductModal({
 }: NewProductModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [unitTypes, setUnitTypes] = useState<
+    { _id: string; name: string; abbreviation: string }[]
+  >([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetch("/api/unit-types")
+        .then((res) => res.json())
+        .then((data) => setUnitTypes(data))
+        .catch((err) => console.error("Failed to fetch unit types:", err));
+    }
+  }, [isOpen]);
 
   const {
     register,
@@ -48,7 +63,10 @@ export default function NewProductModal({
       name: "",
       brand: "",
       category: defaultCategory,
-      unit: "kg",
+      unit: "",
+      unitType: "",
+      packageType: "",
+      quantityPerPackage: 1,
       price: 0,
       description: "",
       lowInventoryThreshold: undefined,
@@ -156,22 +174,58 @@ export default function NewProductModal({
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                Unidade
+                Unidade Base
               </label>
               <select
-                {...register("unit")}
+                {...register("unitType")}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
               >
-                <option value="kg">Quilogramas (kg)</option>
-                <option value="g">Gramas (g)</option>
-                <option value="liters">Litros (L)</option>
-                <option value="units">Unidades</option>
-                <option value="boxes">Caixas</option>
-                <option value="packs">Pacotes</option>
+                <option value="">Selecione...</option>
+                {unitTypes.map((ut) => (
+                  <option key={ut._id} value={ut._id}>
+                    {ut.name} ({ut.abbreviation})
+                  </option>
+                ))}
               </select>
-              {errors.unit && (
+              {errors.unitType && (
                 <p className="mt-1 text-sm text-red-600">
-                  {errors.unit.message}
+                  {errors.unitType.message}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Tipo de Embalagem
+              </label>
+              <input
+                {...register("packageType")}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="ex: Pacote, Caixa, Garrafa"
+              />
+              {errors.packageType && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.packageType.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Qtd por Embalagem
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                {...register("quantityPerPackage", { valueAsNumber: true })}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="ex: 5 (para 5kg)"
+              />
+              {errors.quantityPerPackage && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.quantityPerPackage.message}
                 </p>
               )}
             </div>

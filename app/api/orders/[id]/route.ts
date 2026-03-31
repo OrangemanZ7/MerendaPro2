@@ -61,17 +61,23 @@ export async function PATCH(
         item.receivedQuantity = qtyToReceive;
 
         if (qtyToReceive > 0) {
+          const Product = (await import("@/lib/models")).Product;
+          const product = await Product.findById(item.product);
+          const multiplier = product?.quantityPerPackage || 1;
+          const baseQtyToReceive = qtyToReceive * multiplier;
+
           await Inventory.findOneAndUpdate(
             { location: centralLocation._id, product: item.product },
-            { $inc: { quantity: qtyToReceive } },
+            { $inc: { quantity: baseQtyToReceive } },
             { upsert: true, new: true },
           );
 
           // Update the product's price based on the order's pricePerUnit
           if (item.pricePerUnit !== undefined && item.pricePerUnit !== null) {
-            const Product = (await import("@/lib/models")).Product;
+            // Price per base unit = price per package / quantity per package
+            const pricePerBaseUnit = item.pricePerUnit / multiplier;
             await Product.findByIdAndUpdate(item.product, {
-              price: item.pricePerUnit,
+              price: pricePerBaseUnit,
             });
           }
         }
